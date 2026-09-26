@@ -30,9 +30,10 @@ const STAGES = [
 ];
 
 const $ = id => document.getElementById(id);
-const get = k => { try { return localStorage.getItem('kachna.' + k); } catch {} };
-const set = (k, v) => { try { localStorage.setItem('kachna.' + k, v); } catch {} };
-const wrong = () => +get('wrong.' + stage) || 0;
+// no cookies, no storage: progress lives only in this tab
+let stage = 0;
+const wrongs = [];
+const wrong = () => wrongs[stage] || 0;
 
 async function sha(s) {
   if (!crypto.subtle) return sha256(s); // crypto.subtle only exists on https
@@ -72,8 +73,6 @@ function sha256(s) {
   return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
 }
 
-let stage = Math.min(+get('stage') || 0, STAGES.length);
-
 function hints() {
   $('hints').innerHTML = (STAGES[stage]?.hints || []).slice(0, Math.floor(wrong() / 3)).map(h => `<p>› ${h}</p>`).join('');
 }
@@ -103,10 +102,10 @@ $('f').onsubmit = async e => {
   const a = $('a'), s = STAGES[stage];
   if (!a.value.trim()) return;
   if (await sha(s.norm(a.value)) === s.hash) {
-    set('stage', ++stage);
+    stage++;
     return render();
   }
-  set('wrong.' + stage, wrong() + 1);
+  wrongs[stage] = wrong() + 1;
   $('msg').textContent = 'nope.';
   a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake');
   a.select();
